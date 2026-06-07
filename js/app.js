@@ -20,7 +20,7 @@ const SPLIT = { gap: 28, padTop: 14, padBottom: 14 };
 
 /* ===== 2.5D stack scene ===== */
 const STACK = {
-  sep: -200,
+  sep: -250,
   padTop: 70,
   padBottom: 70,
   shiftX: 55,      // мезонин правее (hover)

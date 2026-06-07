@@ -1,0 +1,194 @@
+:root{
+  --font-ui: "Roboto Condensed", system-ui, -apple-system, Segoe UI, Arial, sans-serif;
+  --font-logo:"Rubik Mono One", "Roboto Condensed", sans-serif;
+
+  --bg:#ffffff;
+  --text:#0a0a0a;
+  --muted:#6b6b6b;
+
+  --border:#0a0a0a;
+  --border2:#d7d7d7;
+
+  --accent:#e1062c;
+  --r:16px;
+}
+
+*{ box-sizing:border-box; }
+html,body{ height:100%; }
+body{
+  margin:0;
+  background:var(--bg);
+  color:var(--text);
+  font-family:var(--font-ui);
+  overflow:hidden;
+}
+
+/* Topbar */
+.m-topbar{
+  position:fixed;
+  top:0; left:0; right:0;
+  background:#fff;
+  border-bottom:2px solid var(--border);
+  z-index:50;
+
+  padding:10px 12px;
+  padding-top: calc(10px + env(safe-area-inset-top));
+  height: calc(56px + env(safe-area-inset-top));
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+.m-logo{ font-family:var(--font-logo); font-size:18px; letter-spacing:.03em; }
+.dot{ color:var(--accent); }
+.m-sub{
+  font-size:12px;
+  color:var(--muted);
+  text-transform:uppercase;
+  letter-spacing:.12em;
+}
+.m-pill{
+  margin-left:auto;
+  border:2px solid var(--border);
+  border-radius:999px;
+  padding:7px 10px;
+  font-size:12px;
+  font-weight:700;
+  text-transform:uppercase;
+  letter-spacing:.12em;
+}
+
+/* Map */
+.m-map{
+  position:fixed;
+  inset:0;
+  padding-top: calc(56px + env(safe-area-inset-top));
+  padding-bottom: calc(220px + env(safe-area-inset-bottom));
+  background:
+    linear-gradient(0deg, rgba(0,0,0,.04), rgba(0,0,0,.04)),
+    repeating-linear-gradient(45deg, rgba(0,0,0,.03) 0 8px, rgba(0,0,0,0) 8px 16px);
+}
+
+.m-map-viewport{
+  position:absolute;
+  inset:12px;
+  border:2px solid var(--border);
+  border-radius:18px;
+  background:#fff;
+
+  /* ВАЖНО: скролл/пан по контенту */
+  overflow:auto;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-x pan-y;
+}
+
+/* SVG теперь НЕ 100% width — размеры задаём JS’ом в px */
+.m-svg{
+  display:block;
+}
+
+/* 2.5D wrapper — размеры тоже задаём JS’ом в px */
+.m-25d-wrap{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+
+  transform: perspective(1000px) rotateX(48deg) rotateZ(-12deg) translateY(-10px);
+  transform-origin: 50% 55%;
+  filter: drop-shadow(0 24px 40px rgba(0,0,0,.18));
+}
+
+/* Bottom sheet */
+.m-sheet{
+  position:fixed;
+  left:0; right:0; bottom:0;
+  background:#fff;
+  border-top:2px solid var(--border);
+  border-radius: 18px 18px 0 0;
+  padding:10px 12px calc(12px + env(safe-area-inset-bottom));
+  z-index:60;
+  max-height: 52vh;
+  overflow:auto;
+}
+
+.m-handle{
+  width:44px;height:5px;border-radius:999px;
+  background:#0a0a0a20;margin:2px auto 10px;
+}
+
+.m-row{ display:flex; gap:8px; align-items:center; margin-bottom:10px; }
+
+.m-btn{
+  border:2px solid var(--border);
+  background:#fff;
+  border-radius:12px;
+  padding:10px 10px;
+  font-family:var(--font-ui);
+  font-size:12px;
+  text-transform:uppercase;
+  letter-spacing:.12em;
+  cursor:pointer;
+  flex:0 0 auto;
+}
+.m-btn:active{ transform: translateY(1px); }
+
+.m-primary{
+  background:var(--accent);
+  border-color:var(--accent);
+  color:#fff;
+  font-weight:700;
+  flex:1;
+}
+
+.m-field{ margin-bottom:10px; }
+.m-field label{
+  display:block;
+  font-size:12px;
+  color:var(--muted);
+  text-transform:uppercase;
+  letter-spacing:.12em;
+  margin-bottom:6px;
+}
+select{
+  width:100%;
+  padding:10px 12px;
+  border-radius:12px;
+  border:2px solid var(--border);
+  background:#fff;
+  font-family:var(--font-ui);
+  font-size:14px;
+}
+
+.m-hint{ font-size:12px; color:var(--muted); line-height:1.35; }
+
+/* You are here */
+.m-yah{
+  display:flex;
+  gap:10px;
+  align-items:center;
+  border:2px solid var(--border);
+  border-radius:16px;
+  padding:10px 12px;
+  margin-bottom:10px;
+}
+.m-yah-dot{ width:12px;height:12px;background:var(--accent); }
+.m-yah-label{
+  font-size:11px;color:var(--muted);
+  text-transform:uppercase;letter-spacing:.14em;
+}
+.m-yah-name{ font-size:15px;font-weight:700; }
+
+/* Steps */
+.m-steps{
+  margin-top:10px;
+  border-top:1px solid var(--border2);
+  padding-top:10px;
+}
+.m-steps-title{
+  font-weight:700;
+  text-transform:uppercase;
+  letter-spacing:.12em;
+  font-size:12px;
+  margin-bottom:8px;
+}
+#m-steps ol{ margin:0; padding-left:18px; }
+#m-steps li{ margin:6px 0; }

@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Зотов — Навигатор (Mobile Demo)</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto+Condensed:wght@400;700&family=Rubik+Mono+One&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="css/mobile.css" />
+  <script src="js/mobile.js" defer></script>
+</head>
+<body>
+
+<header class="m-topbar">
+  <div class="m-logo">ЗОТОВ<span class="dot">.</span></div>
+  <div class="m-sub">Навигатор</div>
+  <div class="m-pill" id="m-status">2D · Фокус: 1</div>
+</header>
+
+<main class="m-map">
+  <div class="m-map-viewport" id="m-viewport">
+    <!-- 2D: один SVG со split (верх/низ) -->
+    <svg id="m-svg-split" class="m-svg" xmlns="http://www.w3.org/2000/svg"></svg>
+
+    <!-- 2.5D: один SVG со stack -->
+    <div class="m-25d-wrap" id="m-25d-wrap" style="display:none">
+      <svg id="m-svg-stack" class="m-svg" xmlns="http://www.w3.org/2000/svg"></svg>
+    </div>
+  </div>
+</main>
+
+<!-- Bottom sheet -->
+<section class="m-sheet" id="m-sheet">
+  <div class="m-handle"></div>
+
+  <div class="m-yah" id="m-yah" style="display:none">
+    <div class="m-yah-dot"></div>
+    <div>
+      <div class="m-yah-label">ВЫ ЗДЕСЬ</div>
+      <div class="m-yah-name" id="m-yah-name">—</div>
+    </div>
+  </div>
+
+  <div class="m-row">
+    <button class="m-btn" id="btn-mode" onclick="toggleMode()">2D</button>
+    <button class="m-btn" id="btn-focus-1" onclick="setFocus(1)">1</button>
+    <button class="m-btn" id="btn-focus-15" onclick="setFocus(1.5)">1½</button>
+    <button class="m-btn" onclick="zoomOut()">−</button>
+    <button class="m-btn" onclick="zoomIn()">+</button>
+  </div>
+
+  <div class="m-field">
+    <label>Откуда</label>
+    <select id="sel-from"></select>
+  </div>
+
+  <div class="m-field">
+    <label>Куда</label>
+    <select id="sel-to"></select>
+  </div>
+
+  <div class="m-row">
+    <button class="m-btn m-primary" onclick="buildRoute()">Построить</button>
+    <button class="m-btn" onclick="swapPoints()" title="Поменять местами">⇅</button>
+    <button class="m-btn" onclick="clearRoute()">Очистить</button>
+  </div>
+
+  <div class="m-hint" id="m-hint">Тап по метке: выбираем «Откуда», потом «Куда».</div>
+
+  <div class="m-steps" id="m-steps" style="display:none">
+    <div class="m-steps-title">Шаги</div>
+    <ol id="steps-list"></ol>
+  </div>
+</section>
+
+</body>
+</html>
