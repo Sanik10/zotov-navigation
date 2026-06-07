@@ -98,6 +98,11 @@
         </details>
       </div>
 
+      <div class="section-title">Сервисы</div>
+      <div class="service-grid">
+        <button class="btn service-btn" onclick="openModal('firstTime')">Я в первый раз</button>
+      </div>
+
       <div class="route-result" id="route-result" style="display:none">
         <div class="section-title">Шаги</div>
         <div class="route-meta" id="route-meta"></div>
@@ -106,8 +111,10 @@
     </section>
 
     <section class="sidebar-inner" id="panel-sched" style="display:none">
-      <div class="section-title">Сегодня</div>
-      <div class="hint" id="current-time-display"></div>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+        <div class="section-title" style="margin:12px 0 8px">Сегодня</div>
+        <div class="hint" id="current-time-display" style="margin:0"></div>
+      </div>
       <div class="schedule-panel" id="schedule-panel"></div>
     </section>
 
@@ -163,6 +170,17 @@
 
   </main>
 
+</div>
+
+<!-- Modal -->
+<div class="modal-backdrop" id="modal-backdrop" style="display:none" onclick="closeModal()"></div>
+<div class="modal" id="modal" style="display:none" role="dialog" aria-modal="true">
+  <div class="modal-head">
+    <div class="modal-title" id="modal-title">—</div>
+    <button class="modal-close" onclick="closeModal()">✕</button>
+  </div>
+  <div class="modal-body" id="modal-body"></div>
+  <div class="modal-actions" id="modal-actions"></div>
 </div>
 
 </body>

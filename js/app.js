@@ -14,20 +14,17 @@ const ASSETS = {
 };
 
 const VIEWBOX = { w: 800.71, h: 336.44 };
-
-/* ===== 2D split scene ===== */
 const SPLIT = { gap: 28, padTop: 14, padBottom: 14 };
 
-/* ===== 2.5D stack scene ===== */
 const STACK = {
-  sep: -250,
+  sep: -275,
   padTop: 70,
   padBottom: 70,
-  shiftX: 55,      // мезонин правее (hover)
-  mezzScale: 0.985 // слегка меньше (ощущение высоты)
+  shiftX: 55,
+  mezzScale: 0.985
 };
 
-/* ===== Categories (цвет плашек) ===== */
+/* ===== Categories ===== */
 const CATEGORIES = {
   nav:     { color:'#0a0a0a' },
   service: { color:'#e1062c' },
@@ -35,7 +32,7 @@ const CATEGORIES = {
   food:    { color:'#e1062c' },
 };
 
-/* ===== ТВОИ ТОЧКИ (пресет) ===== */
+/* ===== Points preset (твои) ===== */
 const PRESET_POINTS = {
   entrance:    { x: 528.6, y: 215.5, floor: 1 },
   reception:   { x: 526.7, y: 129.7, floor: 1 },
@@ -78,11 +75,8 @@ const LOCATIONS = [
 
 const nodeById = new Map(LOCATIONS.map(n => [n.id, n]));
 
-/* ===== Graph edges =====
-   ВАЖНО: переход уровня ТОЛЬКО по stairs <-> stairs15
-*/
+/* ===== Graph edges ===== */
 const EDGES = [
-  // floor 1 core
   ['entrance','reception'],
   ['reception','bookshop'],
   ['reception','cafe'],
@@ -91,14 +85,13 @@ const EDGES = [
   ['reception','stairs'],
   ['reception','elevator'],
 
-  // stairs2 near elevator
   ['elevator','stairs2'],
   ['stairs2','reception'],
 
   // межэтажный переход
   ['stairs','stairs15'],
 
-  // mezz core
+  // mezz
   ['stairs15','wardrobe'],
   ['wardrobe','lockers'],
   ['wardrobe','wc_mezz'],
@@ -108,12 +101,11 @@ const EDGES = [
 const graph = new Map();
 for (const n of LOCATIONS) graph.set(n.id, []);
 for (const [a,b] of EDGES) {
-  if (!graph.has(a) || !graph.has(b)) continue;
-  graph.get(a).push(b);
-  graph.get(b).push(a);
+  graph.get(a)?.push(b);
+  graph.get(b)?.push(a);
 }
 
-/* ===== LocalStorage overrides (разметка) ===== */
+/* ===== LocalStorage overrides ===== */
 function lsKey(id) { return `zotov.loc.${id}`; }
 function getOverride(id) {
   try {
@@ -133,16 +125,13 @@ function getXY(n) {
   const ov = getOverride(n.id);
   if (ov) return { x: ov.x, y: ov.y };
   const pr = PRESET_POINTS[n.id];
-  if (pr) return { x: pr.x, y: pr.y };
-  // fallback (не должен понадобиться)
-  return { x: 0, y: 0 };
+  return pr ? { x: pr.x, y: pr.y } : { x: 0, y: 0 };
 }
 
 /* ===== Dijkstra ===== */
 function dist(aId, bId) {
   const a = nodeById.get(aId);
   const b = nodeById.get(bId);
-  if (!a || !b) return Infinity;
   const pa = getXY(a), pb = getXY(b);
   let d = Math.hypot(pa.x - pb.x, pa.y - pb.y);
   if (a.floor !== b.floor) d += 120;
@@ -150,8 +139,7 @@ function dist(aId, bId) {
 }
 
 function dijkstra(startId, endId) {
-  const D = new Map();
-  const prev = new Map();
+  const D = new Map(), prev = new Map();
   for (const n of LOCATIONS) D.set(n.id, Infinity);
   D.set(startId, 0);
 
@@ -178,6 +166,33 @@ function dijkstra(startId, endId) {
   return { path, totalDist: D.get(endId) };
 }
 
+/* ===== Events (мок-данные для демонстрации) ===== */
+const EVENT_TYPES = {
+  lecture: { label:'Лекция', color:'#e1062c' },
+  film:    { label:'Кино',   color:'#0a0a0a' },
+  tour:    { label:'Экскурсия', color:'#0a0a0a' },
+  special: { label:'Спец', color:'#e1062c' },
+};
+
+const MOCK_EVENTS = [
+  { time:'11:00', end:'11:40', title:'Как устроен ЗОТОВ: быстрый гайд', type:'tour', placeId:'reception', speaker:'Сотрудник ресепшн', desc:'Куда идти в гардероб, где лифт и как не потеряться.' },
+  { time:'12:30', end:'13:40', title:'Показ: “Человек с киноаппаратом”', type:'film', placeId:'cafe', speaker:'', desc:'Демо-событие (в реальности это будет кинозал на 4 этаже).' },
+  { time:'14:00', end:'15:00', title:'Конструктивизм в навигации', type:'lecture', placeId:'bookshop', speaker:'Куратор', desc:'Как плакатная типографика помогает ориентироваться.' },
+  { time:'16:00', end:'16:30', title:'Гардероб / локеры: как пользоваться', type:'special', placeId:'wardrobe', speaker:'', desc:'Демо: сервисная подсказка на мезонине.' },
+];
+
+function timeToMin(str){ const [h,m]=str.split(':').map(Number); return h*60+m; }
+function nowMinutes(){ const d=new Date(); return d.getHours()*60+d.getMinutes(); }
+function nowStr(){ const d=new Date(); return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`; }
+function eventStatus(ev){
+  const now = nowMinutes();
+  const s = timeToMin(ev.time);
+  const e = timeToMin(ev.end);
+  if (now >= s && now < e) return 'now';
+  if (now >= e) return 'past';
+  return 'upcoming';
+}
+
 /* ===== State ===== */
 const state = {
   mode: '2d',
@@ -187,10 +202,9 @@ const state = {
   fromId: '',
   toId: '',
   clickMode: 'from',
-
   route: null,
-  editMode: false,
 
+  editMode: false,
   yahId: '',
   qrRendered: false,
 };
@@ -231,6 +245,15 @@ const el = {
   panelNav: $('#panel-nav'),
   panelSched: $('#panel-sched'),
   panelQr: $('#panel-qr'),
+
+  timeNow: $('#current-time-display'),
+  schedulePanel: $('#schedule-panel'),
+
+  modal: $('#modal'),
+  modalBackdrop: $('#modal-backdrop'),
+  modalTitle: $('#modal-title'),
+  modalBody: $('#modal-body'),
+  modalActions: $('#modal-actions'),
 };
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
@@ -249,7 +272,59 @@ window.switchTab = function(which){
   if (which === 'qr' && !state.qrRendered) renderQR();
 };
 
-/* ===== Mode toggle ===== */
+/* ===== Modal ===== */
+window.openModal = function(kind){
+  el.modalBackdrop.style.display = '';
+  el.modal.style.display = '';
+
+  if (kind === 'firstTime') {
+    el.modalTitle.textContent = 'Я В ПЕРВЫЙ РАЗ';
+    el.modalBody.innerHTML = `
+      <div style="font-weight:700;margin-bottom:8px">Короткий сценарий (самый частый):</div>
+      <ol style="margin:0;padding-left:18px">
+        <li>Войдите → подойдите к <b>рецепции</b> (1 этаж) при необходимости.</li>
+        <li>Если вы с верхней одеждой: идите к <b>Лестнице 1</b> → поднимитесь на <b>мезонин 1½</b> → <b>гардероб</b> / <b>локеры</b>.</li>
+        <li>После гардероба вернитесь на 1 этаж и идите дальше по маршруту (выставки/зал/лифт).</li>
+      </ol>
+      <div style="margin-top:10px;color:#6b6b6b;font-size:12px">
+        Подсказка: на карте мезонин и 1 этаж можно “фокусировать” кнопками <b>1</b> и <b>1½</b>.
+      </div>
+    `;
+    el.modalActions.innerHTML = `
+      <button class="btn" onclick="setFocus(1); closeModal();">Показать 1 этаж</button>
+      <button class="btn primary" onclick="setFocus(1.5); closeModal();">Показать мезонин</button>
+    `;
+  }
+
+  if (kind === 'admin') {
+    const phone = '+7 (495) 000-00-00';
+    el.modalTitle.textContent = 'ВЫЗВАТЬ АДМИНИСТРАТОРА';
+    el.modalBody.innerHTML = `
+      <div style="font-weight:700;margin-bottom:8px">Если вы потерялись или нужна помощь</div>
+      <div style="margin-bottom:10px">
+        Телефон (демо): <b>${phone}</b>
+      </div>
+      <div style="color:#6b6b6b;font-size:12px">
+        В MVP это кнопка помощи. В реальном проекте можно подключить: звонок, чат, форму обращения, SOS.
+      </div>
+    `;
+    el.modalActions.innerHTML = `
+      <button class="btn" onclick="copyText('${phone}')">Скопировать номер</button>
+      <a class="btn primary" href="tel:${phone.replace(/[^\d+]/g,'')}">Позвонить</a>
+    `;
+  }
+};
+
+window.closeModal = function(){
+  el.modalBackdrop.style.display = 'none';
+  el.modal.style.display = 'none';
+};
+
+window.copyText = async function(txt){
+  try { await navigator.clipboard.writeText(txt); } catch {}
+};
+
+/* ===== Mode ===== */
 window.toggleMode = function(){
   state.mode = (state.mode === '2d') ? '25d' : '2d';
   const is25 = state.mode === '25d';
@@ -259,7 +334,6 @@ window.toggleMode = function(){
   renderAll();
 };
 
-/* ===== Focus ===== */
 window.setFocus = function(f){
   state.focus = f;
   el.btnFloorMezz.classList.toggle('active', f === 1.5);
@@ -267,7 +341,6 @@ window.setFocus = function(f){
   renderAll();
 };
 
-/* ===== Zoom ===== */
 window.zoomIn = function(){ state.zoom = clamp(state.zoom * 1.2, 0.6, 3); renderAll(); };
 window.zoomOut = function(){ state.zoom = clamp(state.zoom / 1.2, 0.6, 3); renderAll(); };
 window.addEventListener('resize', () => renderAll());
@@ -282,7 +355,6 @@ function fillSelects() {
     o0.value = '';
     o0.textContent = '— выберите —';
     sel.appendChild(o0);
-
     for (const it of items) {
       const o = document.createElement('option');
       o.value = it.id;
@@ -302,14 +374,8 @@ function fillSelects() {
 /* ===== Route actions ===== */
 window.buildRoute = function(){
   if (!state.fromId || !state.toId) return;
-
   const r = dijkstra(state.fromId, state.toId);
-  if (!r) {
-    el.routeResult.style.display = 'block';
-    el.routeMeta.textContent = 'Маршрут не найден (проверь EDGES).';
-    el.stepsList.innerHTML = '';
-    return;
-  }
+  if (!r) return;
 
   state.route = r;
   el.routeResult.style.display = 'block';
@@ -337,25 +403,22 @@ window.swapPoints = function(){
 function renderSteps(pathIds) {
   el.stepsList.innerHTML = '';
   const nodes = pathIds.map(id => nodeById.get(id)).filter(Boolean);
-
-  for (let i = 0; i < nodes.length; i++) {
+  for (let i=0;i<nodes.length;i++){
     const a = nodes[i];
     const b = nodes[i+1];
-
     if (b && a.floor !== b.floor) {
       const li = document.createElement('li');
-      li.innerHTML = `Переход уровня через <b>${a.name}</b> → <b>${b.name}</b>.`;
+      li.innerHTML = `Переход уровня: <b>${a.name}</b> → <b>${b.name}</b>.`;
       el.stepsList.appendChild(li);
       continue;
     }
-
     const li = document.createElement('li');
-    li.innerHTML = `<b>${a.name}</b> <span style="color:#6b6b6b">(${a.floor === 1.5 ? '1½' : '1'})</span>`;
+    li.innerHTML = `<b>${a.name}</b> <span style="color:#6b6b6b">(${a.floor===1.5?'1½':'1'})</span>`;
     el.stepsList.appendChild(li);
   }
 }
 
-/* ===== Edit mode ===== */
+/* ===== Edit mode (оставляем) ===== */
 window.toggleEditMode = function(){
   state.editMode = !state.editMode;
   el.btnEditToggle.textContent = state.editMode ? 'Разметка: вкл' : 'Разметка: выкл';
@@ -378,8 +441,8 @@ window.exportPoints = function(){
   }
   const txt = JSON.stringify(out, null, 2);
   navigator.clipboard?.writeText(txt).catch(()=>{});
-  alert('JSON скопирован в буфер (если браузер разрешил). Также выведен в console.');
   console.log('EXPORT POINTS:\n', txt);
+  alert('Экспорт выведен в console (и попытались скопировать в буфер).');
 };
 
 window.importPointsPrompt = function(){
@@ -398,14 +461,15 @@ window.importPointsPrompt = function(){
 };
 
 /* ===== QR ===== */
-window.renderQR = function(force = false) {
-  if (!el.qrGrid) return;
+window.renderQR = function(force=false){
   if (state.qrRendered && !force) return;
+  const grid = el.qrGrid;
+  if (!grid) return;
 
-  el.qrGrid.innerHTML = '';
+  grid.innerHTML = '';
   const baseUrl = location.href.split('?')[0];
 
-  const items = LOCATIONS.slice().sort((a,b) => a.name.localeCompare(b.name, 'ru'));
+  const items = LOCATIONS.slice().sort((a,b)=>a.name.localeCompare(b.name,'ru'));
   for (const loc of items) {
     const card = document.createElement('div');
     card.className = 'qr-card';
@@ -416,7 +480,7 @@ window.renderQR = function(force = false) {
 
     const sub = document.createElement('div');
     sub.className = 'qr-sub';
-    sub.textContent = `Этаж: ${loc.floor === 1.5 ? '1½' : '1'} · id: ${loc.id}`;
+    sub.textContent = `Этаж: ${loc.floor===1.5?'1½':'1'} · id: ${loc.id}`;
 
     const box = document.createElement('div');
     box.className = 'qr-box';
@@ -426,7 +490,7 @@ window.renderQR = function(force = false) {
     card.appendChild(title);
     card.appendChild(sub);
     card.appendChild(box);
-    el.qrGrid.appendChild(card);
+    grid.appendChild(card);
 
     // eslint-disable-next-line no-undef
     new QRCode(box, {
@@ -442,7 +506,7 @@ window.renderQR = function(force = false) {
   state.qrRendered = true;
 };
 
-/* ===== SVG utils ===== */
+/* ===== SVG helpers ===== */
 function setSvgBase(svg, viewBoxStr) {
   svg.setAttribute('xmlns', SVG_NS);
   svg.setAttribute('viewBox', viewBoxStr);
@@ -487,7 +551,7 @@ function badge(g, txt, x, y) {
   g.appendChild(t);
 }
 
-/* ===== Origins ===== */
+/* ===== Origins + scene point ===== */
 function getOrigins2D() {
   const H = VIEWBOX.h;
   return {
@@ -514,7 +578,7 @@ function scenePoint(loc, mode) {
   return { x: org.x + p.x, y: org.y + p.y };
 }
 
-/* ===== POI draw ===== */
+/* ===== POI ===== */
 function drawPoi(g, loc, mode) {
   const pt = scenePoint(loc, mode);
 
@@ -538,7 +602,6 @@ function drawPoi(g, loc, mode) {
   rect.setAttribute('rx', '4');
   rect.setAttribute('fill', '#fff');
 
-  // выделение "вы здесь"
   if (loc.id === state.yahId) {
     rect.setAttribute('stroke', '#e1062c');
     rect.setAttribute('stroke-width', '3');
@@ -580,45 +643,33 @@ function drawPoi(g, loc, mode) {
   g.appendChild(node);
 }
 
-/* ===== Route draw (segments + connector line) ===== */
+/* ===== Route: solid segments + dashed cross-floor connector ===== */
 function drawRoute(g, mode) {
   if (!state.route) return;
 
-  const ids = state.route.path;
-  const nodes = ids.map(id => nodeById.get(id)).filter(Boolean);
+  const nodes = state.route.path.map(id => nodeById.get(id)).filter(Boolean);
   if (nodes.length < 2) return;
 
-  // 1) Рисуем сегменты маршрута ПО ЭТАЖАМ отдельно (сплошная линия)
-  const byFloor = new Map(); // floor -> array of nodes (in order)
-  for (let i = 0; i < nodes.length; i++) {
-    const n = nodes[i];
-    if (!byFloor.has(n.floor)) byFloor.set(n.floor, []);
-    byFloor.get(n.floor).push(n);
-  }
+  // segments split by floor changes
+  let seg = [nodes[0]];
+  const segs = [];
+  const connectors = [];
 
-  // НО: чтобы не соединять точки через "пропуски" другого этажа,
-  // построим сегменты по последовательности и разорвём при смене пола.
-  const floorSegs = { 1: [], 1.5: [] };
-  let curSeg = [nodes[0]];
-
-  for (let i = 1; i < nodes.length; i++) {
-    const prev = nodes[i - 1];
-    const cur = nodes[i];
-
-    if (cur.floor === prev.floor) {
-      curSeg.push(cur);
+  for (let i=1;i<nodes.length;i++){
+    const a = nodes[i-1], b = nodes[i];
+    if (a.floor === b.floor) {
+      seg.push(b);
     } else {
-      // закрываем сегмент
-      if (curSeg.length >= 2) floorSegs[prev.floor].push(curSeg);
-      curSeg = [cur]; // начинаем новый сегмент на новом этаже
+      if (seg.length >= 2) segs.push({ floor: a.floor, nodes: seg });
+      seg = [b];
+      connectors.push([a,b]);
     }
   }
-  if (curSeg.length >= 2) floorSegs[curSeg[0].floor].push(curSeg);
+  if (seg.length >= 2) segs.push({ floor: seg[0].floor, nodes: seg });
 
-  const drawSolidSeg = (segNodes, floor) => {
-    const pts = segNodes.map(n => scenePoint(n, mode));
-    const dStr = pts.map((p,i) => (i===0 ? `M ${p.x} ${p.y}` : `L ${p.x} ${p.y}`)).join(' ');
-
+  for (const s of segs) {
+    const pts = s.nodes.map(n => scenePoint(n, mode));
+    const dStr = pts.map((p,i)=> i===0 ? `M ${p.x} ${p.y}` : `L ${p.x} ${p.y}`).join(' ');
     const path = sEl('path');
     path.setAttribute('d', dStr);
     path.setAttribute('fill', 'none');
@@ -626,23 +677,13 @@ function drawRoute(g, mode) {
     path.setAttribute('stroke-width', '4');
     path.setAttribute('stroke-linecap', 'round');
     path.setAttribute('stroke-linejoin', 'round');
-    path.setAttribute('opacity', floor === 1.5 ? '0.82' : '0.9');
-
+    path.setAttribute('opacity', s.floor === 1.5 ? '0.82' : '0.9');
     g.appendChild(path);
-  };
+  }
 
-  for (const seg of floorSegs[1])   drawSolidSeg(seg, 1);
-  for (const seg of floorSegs[1.5]) drawSolidSeg(seg, 1.5);
-
-  // 2) Пунктирные коннекторы ТОЛЬКО там, где происходит смена этажа
-  for (let i = 0; i < nodes.length - 1; i++) {
-    const a = nodes[i];
-    const b = nodes[i + 1];
-    if (a.floor === b.floor) continue;
-
+  for (const [a,b] of connectors) {
     const pa = scenePoint(a, mode);
     const pb = scenePoint(b, mode);
-
     const line = sEl('line');
     line.setAttribute('x1', String(pa.x));
     line.setAttribute('y1', String(pa.y));
@@ -653,74 +694,16 @@ function drawRoute(g, mode) {
     line.setAttribute('stroke-dasharray', '7 7');
     line.setAttribute('opacity', '0.75');
     g.appendChild(line);
-
-    // маленькие "капсы" на концах (чтобы читалось как переход)
-    const cap = (x, y) => {
-      const c = sEl('circle');
-      c.setAttribute('cx', String(x));
-      c.setAttribute('cy', String(y));
-      c.setAttribute('r', '3.2');
-      c.setAttribute('fill', '#ffffff');
-      c.setAttribute('stroke', '#e1062c');
-      c.setAttribute('stroke-width', '2');
-      c.setAttribute('opacity', '0.95');
-      g.appendChild(c);
-    };
-    cap(pa.x, pa.y);
-    cap(pb.x, pb.y);
   }
 }
 
-
-/* ===== Edit click mapping ===== */
-function clientToSvgPoint(svg, evt) {
-  const pt = svg.createSVGPoint();
-  pt.x = evt.clientX;
-  pt.y = evt.clientY;
-  const ctm = svg.getScreenCTM();
-  if (!ctm) return null;
-  return pt.matrixTransform(ctm.inverse());
-}
-function unzoomPoint(p, cx, cy, z) {
-  return { x: cx + (p.x - cx)/z, y: cy + (p.y - cy)/z };
-}
-function bindEditClick(svg, mode) {
-  svg.onclick = (evt) => {
-    if (!state.editMode) return;
-
-    const id = el.selEdit.value;
-    if (!id) return;
-
-    const loc = nodeById.get(id);
-    const p0 = clientToSvgPoint(svg, evt);
-    if (!p0 || !loc) return;
-
-    const origins = (mode === '2d') ? getOrigins2D() : getOrigins25D();
-    const sceneH = origins.sceneH;
-
-    const cx = VIEWBOX.w / 2;
-    const cy = sceneH / 2;
-    const p = unzoomPoint(p0, cx, cy, state.zoom);
-
-    const org = (loc.floor === 1.5) ? origins.mezz : origins.f1;
-    const fx = Number((p.x - org.x).toFixed(1));
-    const fy = Number((p.y - org.y).toFixed(1));
-
-    setOverride(id, fx, fy);
-    el.editStatus.textContent = `Сохранено: ${id} → x=${fx}, y=${fy} (этаж ${loc.floor === 1.5 ? '1½' : '1'})`;
-
-    renderAll();
-  };
-}
-
-/* ===== Render header label ===== */
+/* ===== Render maps ===== */
 function renderHeaderLabel() {
   const modeLabel = (state.mode === '2d') ? '2D' : '2.5D';
   const focusLabel = (state.focus === 1) ? '1' : '1½';
   el.floorLabel.textContent = `${modeLabel} · Фокус: ${focusLabel}`;
 }
 
-/* ===== Render 2D ===== */
 function render2D() {
   const H = VIEWBOX.h;
   const W = VIEWBOX.w;
@@ -763,7 +746,6 @@ function render2D() {
   bindEditClick(el.svgSplit, '2d');
 }
 
-/* ===== Render 2.5D ===== */
 function render25D() {
   const W = VIEWBOX.w;
   const H = VIEWBOX.h;
@@ -804,6 +786,97 @@ function render25D() {
   bindEditClick(el.svgStack, '25d');
 }
 
+/* ===== Edit click mapping ===== */
+function clientToSvgPoint(svg, evt) {
+  const pt = svg.createSVGPoint();
+  pt.x = evt.clientX;
+  pt.y = evt.clientY;
+  const ctm = svg.getScreenCTM();
+  if (!ctm) return null;
+  return pt.matrixTransform(ctm.inverse());
+}
+function unzoomPoint(p, cx, cy, z) {
+  return { x: cx + (p.x - cx)/z, y: cy + (p.y - cy)/z };
+}
+function bindEditClick(svg, mode) {
+  svg.onclick = (evt) => {
+    if (!state.editMode) return;
+
+    const id = el.selEdit.value;
+    if (!id) return;
+
+    const loc = nodeById.get(id);
+    const p0 = clientToSvgPoint(svg, evt);
+    if (!p0 || !loc) return;
+
+    const origins = (mode === '2d') ? getOrigins2D() : getOrigins25D();
+    const sceneH = origins.sceneH;
+
+    const cx = VIEWBOX.w / 2;
+    const cy = sceneH / 2;
+    const p = unzoomPoint(p0, cx, cy, state.zoom);
+
+    const org = (loc.floor === 1.5) ? origins.mezz : origins.f1;
+    const fx = Number((p.x - org.x).toFixed(1));
+    const fy = Number((p.y - org.y).toFixed(1));
+
+    setOverride(id, fx, fy);
+    el.editStatus.textContent = `Сохранено: ${id} → x=${fx}, y=${fy} (этаж ${loc.floor === 1.5 ? '1½' : '1'})`;
+
+    renderAll();
+  };
+}
+
+/* ===== Schedule render ===== */
+function renderSchedule() {
+  if (el.timeNow) el.timeNow.textContent = `Сейчас: ${nowStr()}`;
+  if (!el.schedulePanel) return;
+
+  const rows = MOCK_EVENTS
+    .slice()
+    .sort((a,b) => timeToMin(a.time) - timeToMin(b.time));
+
+  el.schedulePanel.innerHTML = '';
+
+  // current event block
+  const nowEv = rows.find(e => eventStatus(e) === 'now');
+  if (nowEv) {
+    const placeName = nodeById.get(nowEv.placeId)?.name || nowEv.placeId || '';
+    const t = EVENT_TYPES[nowEv.type] || { label: nowEv.type, color:'#0a0a0a' };
+    const wrap = document.createElement('div');
+    wrap.className = 'event-now';
+    wrap.innerHTML = `
+      <div class="event-title">
+        <span class="event-badge" style="border-color:${t.color};color:${t.color}">${t.label}</span>
+        <b>Сейчас:</b> ${nowEv.time}–${nowEv.end} · ${nowEv.title}
+      </div>
+      <div class="event-meta">${placeName ? `Локация: ${placeName}` : ''} ${nowEv.speaker ? ` · ${nowEv.speaker}` : ''}</div>
+      <div class="event-meta">${nowEv.desc || ''}</div>
+    `;
+    el.schedulePanel.appendChild(wrap);
+  }
+
+  for (const ev of rows) {
+    const st = eventStatus(ev);
+    if (st === 'past') continue;
+
+    const placeName = nodeById.get(ev.placeId)?.name || ev.placeId || '';
+    const t = EVENT_TYPES[ev.type] || { label: ev.type, color:'#0a0a0a' };
+
+    const div = document.createElement('div');
+    div.className = 'event';
+    div.innerHTML = `
+      <div class="event-title">
+        <span class="event-badge" style="border-color:${t.color};color:${t.color}">${t.label}</span>
+        ${ev.time}–${ev.end} · <b>${ev.title}</b>
+      </div>
+      <div class="event-meta">${placeName ? `Локация: ${placeName}` : ''} ${ev.speaker ? ` · ${ev.speaker}` : ''}</div>
+      <div class="event-meta">${ev.desc || ''}</div>
+    `;
+    el.schedulePanel.appendChild(div);
+  }
+}
+
 /* ===== Main render ===== */
 function renderAll() {
   renderHeaderLabel();
@@ -815,10 +888,11 @@ function renderAll() {
 function init() {
   fillSelects();
 
-  // mode default
+  // default mode
   el.mode2d.style.display = 'flex';
   el.mode25d.style.display = 'none';
   el.btnMode.textContent = '2.5D';
+  setFocus(1);
 
   // query ?yah=
   const q = parseQuery();
@@ -829,18 +903,18 @@ function init() {
     el.yahBanner.style.display = '';
     el.yahName.textContent = `${loc.name} (${loc.floor === 1.5 ? '1½' : '1'})`;
 
-    // ставим в "Откуда"
     state.fromId = loc.id;
     state.clickMode = 'to';
     el.selFrom.value = loc.id;
     el.clickBar.textContent = 'Вы здесь. Теперь выберите «Куда».';
 
-    // фокус на его этаж
-    state.focus = loc.floor;
-    el.btnFloorMezz.classList.toggle('active', state.focus === 1.5);
-    el.btnFloorF1.classList.toggle('active', state.focus === 1);
+    setFocus(loc.floor);
   }
+
+  renderSchedule();
+  setInterval(renderSchedule, 30_000);
 
   renderAll();
 }
+
 init();
